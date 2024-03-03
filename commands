@@ -1,0 +1,18 @@
+
+Run emulator:
+qemu-system-x86_64 -bios OVMF.fd
+
+Compiler
+ x86_64-w64-mingw32-gcc -ffreestanding hello.c -o hello.o -I/usr/include/efi -c
+ 
+ Linker
+ x86_64-w64-mingw32-gcc -nostdlib -Wl,-dll -shared -o BOOTX64.efi hello.o -e efi_main -Wl,--subsystem,10 -Wl,-L/usr/lib/libefi.a
+ 
+x86_64-w64-mingw32-ld -nostdlib -dll -shared -Bsymbolic -T /usr/lib/elf_x86_64_efi.lds -L/usr/lib -l:libgnuefi.a -l:libefi.a -e efi_main  -o BOOTX64.efi hello.o 
+
+
+
+
+/usr/lib/crt0-efi-x86_64.o\
+
+objcopy -j .text -j .sdata -j .data -j .rodata -j .dynamic -j .dynsym  -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-x86_64 --subsystem=10 hello.efi hello.efi
