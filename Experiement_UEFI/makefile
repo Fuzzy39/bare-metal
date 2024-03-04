@@ -1,6 +1,6 @@
 ARCH            = $(shell uname -m | sed s,i[3456789]86,ia32,)
 
-SRC 		= hello.c
+SRC 			= hello.c
 OBJS            = hello.o
 TARGET          = hello.efi
 
