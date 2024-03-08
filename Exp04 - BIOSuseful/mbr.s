@@ -63,7 +63,7 @@ entry:
 drive_ext_installed:
 	
 	
-	; now we can try to read things from disk. supposedly.
+	
 	
 	; print a message, because I want to.
 	mov si, messageDrive
@@ -76,6 +76,33 @@ drive_ext_installed:
 	call r_printstr
 	
 	
+	; now we can try to read things from disk. supposedly.
+	mov ah, 0x42
+	mov dl, [driveBooted]
+	mov si, disk_access_packet
+	
+	int 0x13
+	
+	; check if worked
+	jnc sectors_read
+	
+	mov si, errorDrive
+	call r_printstr
+	
+	mov si, tempByte
+	call r_printbyte
+	
+	mov si, newline
+	call r_printstr
+	
+	jmp hang
+	
+	
+	
+sectors_read:
+	
+	mov si, teststr
+	call r_printstr
 	
 	
 	; wrap up.
@@ -160,21 +187,52 @@ high_print:
 	ret
 
 
-				
+
+sectors equ 1
+
+; disk address packet for reading additional sectors from the disk
+disk_access_packet:
+db 0x10						; packet size
+db 0						; reserved
+dw sectors					; sectors to absorb in my scalp
+dd 0x7e00					; pointer to place to load it
+dq 1						; starting absolute block number
+
+
+
+tempByte: db 0				
 driveBooted: db 0
 message1 db "Hi! I'm real! (16-bit)" , 13, 10, 0
 message2 db "Figuring things out...", 13, 10, 0
-messageDrive db "I booted from a disk with BIOS ID: ", 0
+messageDrive db "I booted from a disk with BIOS ID: 0x", 0
 newline db 13,10,0
 error13ext db "Interrupt 0x13 extensions are not supported. I don't know how to read the hard drive.", 13, 10, 0
+errorDrive db "Error Reading Drive. Code: 0x", 0
 
 ; fill remainder of MBR with zeroes
 TIMES 446-($-$$) db 0
 
-TIMES 64 db 0
+db 0xff
+TIMES 63 db 0
 
 
 ; MBR magic number
 db 0x55
 db 0xAA
+
+
+
+; STAGE 2 -----------------------------------------------------
+
+
+
+; nasm asm. Link with mbr.s
+; code beyond the boot sector
+; goal here is to understand fat enough to run a file from it, where we'll run more code.
+
+
+teststr db "This message originates from beyond the boot sector!", 13, 10, 0
+
+TIMES (512*(1+sectors))-($-$$) db 0
+
 
