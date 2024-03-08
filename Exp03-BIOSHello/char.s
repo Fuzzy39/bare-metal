@@ -1,5 +1,6 @@
 ; nasm assembly [EXP 03]
-; Make a MBR that uses BIOS functions to print a message.
+; Goal: Make a MBR that uses BIOS functions to print a message.
+; this is the first program, which simply prints a character.
 
 BITS 16
 
@@ -8,8 +9,7 @@ org 0x7c00
 entry:
 	; Note: assume every register is filled with garbage initially.
 	
-	; first, we want to ensure the segment
-	; registers are set up in a way that makes sense.
+	
 	
 	
 	mov ah, 0xE				; print character
@@ -24,7 +24,6 @@ hang:
 	jmp hang				; do nothing. BIOS still does stuff
 						; due to interrupts being enabled
 
-string db "It's alive!" , 0
 
 ; fill remainder of MBR with zeroes
 TIMES 510-($-$$) db 0
