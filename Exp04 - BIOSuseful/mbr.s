@@ -6,44 +6,51 @@ BITS 16
 
 org 0x7c00
 
+; some random memory locations where we'll store stuff
+spare_mem equ 0x0550 ; we have 0x50 bytes here.
+
+
 entry:
 	; Note: assume every register is filled with garbage initially.
 	
 	; first, we want to ensure the segment
 	; registers are set up in a way that makes sense.
-	
+
+
+; ----- Setup ------------------------------------------------------
+
+	jmp 0:start				; clear cs, we're gonna ignore segmentation.
+start:
 	mov [driveBooted], dl
 	
 	xor ax, ax 				; zero ax
-	mov es, ax				; and the extra segment (I don't think that's 
-						; it's name, but eh.)
+	mov es, ax				; and the extra segment
 	mov ds, ax				; zero data segment
 	
 						
 	; setup the stack
 	mov ss, ax				; zero the stack segment
-	 	
 	mov sp, 0x7bff				; put the stack below our code.
 	
-	
+
+; ----- Text Output ------------------------------------------------------
+
 	
 	; try clearing the screen by setting the graphics mode?
 	mov ah, 0x0				; set mode
-	
 	mov al, 3				; mode 3 is text, I think.
-	
 	int 0x10
 	
 	
 	; Let's print a couple messages to show we're alive and kicking.
 
-	mov si, message1			
+	mov si, messageWelcome			
 	call r_printstr				
 	
-	mov si, message2
-	call r_printstr
 	
-	
+
+; ----- Prepare to get more secctors ------------------------------------------------------
+
 	; let's try to figure out disk io now I guess.
 	
 	; step one: are int 13h extensions enabled? If not we give up and croak
@@ -56,13 +63,13 @@ entry:
 	
 	jnc drive_ext_installed
 	
-	mov si, error13ext			; if not, throw an error and give up.
-	call r_printstr
-	jmp hang
+
+	push msg_error_13ext			; error out and give up.
+	mov ah, 0
+	jmp r_error
+
 
 drive_ext_installed:
-	
-	
 	
 	
 	; print a message, because I want to.
@@ -75,43 +82,76 @@ drive_ext_installed:
 	mov si, newline
 	call r_printstr
 	
-	
+
+
+
+	; Next we get info about the disk.
+	mov ah, 0x48				; GET DRIVE PARAMETERS
+	mov dl, [driveBooted]		
+	mov si, spare_mem
+
+	mov word [si], 0x0042				; size of buffer
+
+	int 0x13
+
+	jnc got_drive_params
+
+	; error!
+	push msg_error_driveParams
+	jmp r_error
+
+got_drive_params:
+
+	; check that sector size is equal to 512
+
+	; print sector size
+	;mov si, spare_mem+0x19
+	;call r_printbyte
+	;dec si
+	;call r_printbyte
+	;mov si, newline
+	;call r_printstr
+
+
+	mov ax, [spare_mem+0x18]
+	cmp ax, 512
+	je get_sectors
+
+	mov ah, 0
+	push msg_error_sectorLen
+	jmp r_error
+
+; ----- Get more sectors ------------------------------------------------------
+
+
+get_sectors:
+
 	; now we can try to read things from disk. supposedly.
 	mov ah, 0x42
-	mov dl, [driveBooted]
 	mov si, disk_access_packet
 	
 	int 0x13
 	
 	; check if worked
-	jnc sectors_read
+	jnc stage2_entry			; If We succeded, we can now bail to stage 2.
 	
-	mov si, errorDrive
-	call r_printstr
-	
-	mov si, tempByte
-	call r_printbyte
-	
-	mov si, newline
-	call r_printstr
-	
-	jmp hang
+	; print an error message.
+	push msg_error_drive
+	jmp r_error
 	
 	
-	
-sectors_read:
-	
-	mov si, teststr
-	call r_printstr
+
 	
 	
-	; wrap up.
+
+; ----- END ------------------------------------------------------
 	
 hang:
 	hlt
 	jmp hang				; do nothing.
 	
 	
+; ----- functions/routines ------------------------------------------------------
 
 r_printstr:
 ; -------------
@@ -147,12 +187,12 @@ r_printbyte:
 ; ---------------
 ; prints a byte. si is the address of the byte to print.	
 
-	mov al, [si]
+	mov al, [ds:si]
 	and al, 0xF0 				; get the high nybble
 	shr al, 4
 	call r_printnybble
 	
-	mov al, [si]				; low nybble
+	mov al, [ds:si]				; low nybble
 	and al, 0x0f
 	call r_printnybble
 	ret
@@ -186,6 +226,36 @@ high_print:
 	int 0x10
 	ret
 
+r_error:
+; ---------------
+; errors out with a code. pops an address to an error message string. ah is error code
+	mov [errorCodeTemp], ah
+
+	mov si, msg_error
+	call r_printstr
+
+	pop si
+	call r_printstr
+
+
+	mov ah, [errorCodeTemp]			; avoid printing error code if there isn't one.
+	cmp ah, 0
+	je err_end
+
+	mov si, msg_error_code
+	call r_printstr
+	
+	mov si, errorCodeTemp
+	call r_printbyte
+	
+err_end:
+	mov si, newline
+	call r_printstr
+	
+	mov si, msg_abort
+	call r_printstr
+
+	jmp hang
 
 
 sectors equ 1
@@ -200,20 +270,24 @@ dq 1						; starting absolute block number
 
 
 
-tempByte: db 0				
+errorCodeTemp: db 0				
 driveBooted: db 0
-message1 db "Hi! I'm real! (16-bit)" , 13, 10, 0
-message2 db "Figuring things out...", 13, 10, 0
-messageDrive db "I booted from a disk with BIOS ID: 0x", 0
+messageWelcome db "BIOS MBR boot" , 13, 10, 0
+messageDrive db "On disk with ID: 0x", 0
 newline db 13,10,0
-error13ext db "Interrupt 0x13 extensions are not supported. I don't know how to read the hard drive.", 13, 10, 0
-errorDrive db "Error Reading Drive. Code: 0x", 0
+msg_error db "Error: ",0
+msg_error_code db ". Code: 0x",0
+msg_error_13ext db "Interrupt 0x13 ext. are not supported.", 0
+msg_error_drive db "Failed reading drive", 0
+msg_error_driveParams db "Failed getting drive params",0
+msg_error_sectorLen db "Sector size not 512 bytes.", 0
+msg_abort db "Boot Abort.", 13, 10, 0
 
 ; fill remainder of MBR with zeroes
 TIMES 446-($-$$) db 0
 
-db 0xff
-TIMES 63 db 0
+; partition table which we currently don't care about
+TIMES 64 db 0
 
 
 ; MBR magic number
@@ -226,12 +300,19 @@ db 0xAA
 
 
 
-; nasm asm. Link with mbr.s
+
 ; code beyond the boot sector
 ; goal here is to understand fat enough to run a file from it, where we'll run more code.
 
 
-teststr db "This message originates from beyond the boot sector!", 13, 10, 0
+teststr db "BIOS MBR boot: stage 2 started", 13, 10, 0
+
+stage2_entry:
+	mov si, teststr				; print a to show that we're executing from stage 2.
+	call r_printstr
+
+	jmp hang
+
 
 TIMES (512*(1+sectors))-($-$$) db 0
 
