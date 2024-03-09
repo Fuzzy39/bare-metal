@@ -307,8 +307,8 @@ text_video_memory equ 0xb800
 
 msg_stage2Welcome db "BIOS MBR boot: stage 2 started", 13, 10, 0
 msg_error_noColor db "VGA is either not enabled or in a monochrome mode",0
-msg_testNoBios db "HELLO!!!!                   ",0
-color_attr db 0x05
+msg_testNoBios db "HELLO!!!! This is a message that you ought to enjoy.",0
+color_attr equ 0x05
 
 
 stage2_entry:
@@ -316,43 +316,39 @@ stage2_entry:
 	call r_printstr
 
 
-	; check whether the display supports color. this isn't super important but may as
-	mov ah, [0x489]		; this byte contains vga display info
-	and ah, 0b00000111
-	cmp ah, 0x01		; the bottom 3 bits are
-				; 0 - vga enabled
-				; 1 - gray scale enabled
-				; 2 - monochrome monitor
-	je color_display
-
-	; error out
-
-	mov ah, [0x489]	
-	push msg_error_noColor
-	jmp r_error
+	
+	; given the age of computers we care about this working on,
+	; we will assume VGA is a thing and working.
+	; also I don't quite understand how to check for it so meh.
 
 
 
-color_display:
 	; we're going to mess around with video memory now.
-	mov di, text_video_memory
+	mov ax, text_video_memory
+	mov es, ax
+	mov di, 160*4
 	mov si, msg_testNoBios
 
 
-	mov byte [text_video_memory+1], 0x0F
-	mov byte [text_video_memory], '?'
+
+
 
 noBios_loop:
-	cmp byte [si], 0
+	cmp byte [ds:si], 0
 	je hang
 
 	
 
 	; print character
-	movsb
+	;mov ax, [ds:si]
+	;mov [es:di], ax
+	;inc si
+	;inc di
 
+	movsb
+	
 	; color atrr
-	mov byte [di], color_attr
+	mov byte [es:di], color_attr
 	inc di
 
 
