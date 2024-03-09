@@ -7,8 +7,9 @@ BITS 16
 org 0x7c00
 
 ; some random memory locations where we'll store stuff
-spare_mem equ 0x0550 ; we have 0x50 bytes here.
-
+spare_mem equ 0x0500 ; we have 0x50 bytes here.
+errorCodeTemp equ 0x550				
+driveBooted: equ 0x551
 
 entry:
 	; Note: assume every register is filled with garbage initially.
@@ -33,6 +34,10 @@ start:
 	mov sp, 0x7bff				; put the stack below our code.
 	
 
+	cld					; clear the direction flag
+						; this makes sure we will read strings and things
+						; in the correct direction (a good idea)
+
 ; ----- Text Output ------------------------------------------------------
 
 	
@@ -45,8 +50,7 @@ start:
 	; Let's print a couple messages to show we're alive and kicking.
 
 	mov si, messageWelcome			
-	call r_printstr				
-	
+	call r_printstr	
 	
 
 ; ----- Prepare to get more secctors ------------------------------------------------------
@@ -104,18 +108,22 @@ got_drive_params:
 
 	; check that sector size is equal to 512
 
-	; print sector size
-	;mov si, spare_mem+0x19
-	;call r_printbyte
-	;dec si
-	;call r_printbyte
-	;mov si, newline
-	;call r_printstr
+	
 
 
 	mov ax, [spare_mem+0x18]
 	cmp ax, 512
 	je get_sectors
+
+	; the sector size is wrong, so we'll print it out.
+	; barely enough space for this, so hopefully if somebody encounters this 
+	; they would be able to guess what it's for
+	mov si, spare_mem+0x19
+	call r_printbyte
+	dec si
+	call r_printbyte
+	mov si, newline
+	call r_printstr
 
 	mov ah, 0
 	push msg_error_sectorLen
@@ -139,28 +147,15 @@ get_sectors:
 	push msg_error_drive
 	jmp r_error
 	
-	
+; ----- end of MBR main code ---------------------------------------------------	
 
-	
-	
 
-; ----- END ------------------------------------------------------
-	
-hang:
-	hlt
-	jmp hang				; do nothing.
-	
-	
+
 ; ----- functions/routines ------------------------------------------------------
 
 r_printstr:
 ; -------------
 ; Prints a string. si should contain the address of the string	
-	cld					; clear the direction flag
-						; this makes sure we will read the string 
-						; in the correct direction (a good idea)
-	
-	
 			
 print_loop:
 	mov al, [ds:si]				
@@ -254,8 +249,11 @@ err_end:
 	
 	mov si, msg_abort
 	call r_printstr
-
-	jmp hang
+	
+	; we've reached the end of the road.
+hang:
+	hlt
+	jmp hang				; do nothing.
 
 
 sectors equ 1
@@ -270,21 +268,22 @@ dq 1						; starting absolute block number
 
 
 
-errorCodeTemp: db 0				
-driveBooted: db 0
-messageWelcome db "BIOS MBR boot" , 13, 10, 0
-messageDrive db "On disk with ID: 0x", 0
+
+messageWelcome db "BIOS MBR boot" 		; we do a trick to save some space here. newline is next.
 newline db 13,10,0
+messageDrive db "On disk with ID: 0x", 0
+
 msg_error db "Error: ",0
 msg_error_code db ". Code: 0x",0
-msg_error_13ext db "Interrupt 0x13 ext. are not supported.", 0
+msg_error_13ext db "Interrupt 13h ext. are not supported.", 0
 msg_error_drive db "Failed reading drive", 0
-msg_error_driveParams db "Failed getting drive params",0
-msg_error_sectorLen db "Sector size not 512 bytes.", 0
-msg_abort db "Boot Abort.", 13, 10, 0
+msg_error_driveParams db "Failed getting drive info",0
+msg_error_sectorLen db "Sector not 200h bytes.", 0
+msg_abort db "Boot Abort.", 0
 
 ; fill remainder of MBR with zeroes
-TIMES 446-($-$$) db 0
+bytes_free equ 446-($-$$)
+TIMES  bytes_free db 0
 
 ; partition table which we currently don't care about
 TIMES 64 db 0
@@ -304,14 +303,60 @@ db 0xAA
 ; code beyond the boot sector
 ; goal here is to understand fat enough to run a file from it, where we'll run more code.
 
+text_video_memory equ 0xb800
 
-teststr db "BIOS MBR boot: stage 2 started", 13, 10, 0
+msg_stage2Welcome db "BIOS MBR boot: stage 2 started", 13, 10, 0
+msg_error_noColor db "VGA is either not enabled or in a monochrome mode",0
+msg_testNoBios db "HELLO!!!!                   ",0
+color_attr db 0x05
+
 
 stage2_entry:
-	mov si, teststr				; print a to show that we're executing from stage 2.
+	mov si, msg_stage2Welcome		; print a to show that we're executing from stage 2.
 	call r_printstr
 
-	jmp hang
+
+	; check whether the display supports color. this isn't super important but may as
+	mov ah, [0x489]		; this byte contains vga display info
+	and ah, 0b00000111
+	cmp ah, 0x01		; the bottom 3 bits are
+				; 0 - vga enabled
+				; 1 - gray scale enabled
+				; 2 - monochrome monitor
+	je color_display
+
+	; error out
+
+	mov ah, [0x489]	
+	push msg_error_noColor
+	jmp r_error
+
+
+
+color_display:
+	; we're going to mess around with video memory now.
+	mov di, text_video_memory
+	mov si, msg_testNoBios
+
+
+	mov byte [text_video_memory+1], 0x0F
+	mov byte [text_video_memory], '?'
+
+noBios_loop:
+	cmp byte [si], 0
+	je hang
+
+	
+
+	; print character
+	movsb
+
+	; color atrr
+	mov byte [di], color_attr
+	inc di
+
+
+	jmp noBios_loop
 
 
 TIMES (512*(1+sectors))-($-$$) db 0
