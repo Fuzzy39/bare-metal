@@ -301,14 +301,15 @@ db 0xAA
 
 
 ; code beyond the boot sector
-; goal here is to understand fat enough to run a file from it, where we'll run more code.
+; goal here is just to print some text not using the bios.
+; if we can do this, we're ready to make the real bootloader, start learning about protected
+; mode, etc.
 
 text_video_memory equ 0xb800
 
 msg_stage2Welcome db "BIOS MBR boot: stage 2 started", 13, 10, 0
-msg_error_noColor db "VGA is either not enabled or in a monochrome mode",0
-msg_testNoBios db "HELLO!!!! This is a message that you ought to enjoy.",0
-color_attr equ 0x05
+msg_testNoBios db "Experiment #4 is a success!",0
+color_attr equ 0x0A ; green!
 
 
 stage2_entry:
@@ -324,11 +325,11 @@ stage2_entry:
 
 
 	; we're going to mess around with video memory now.
+	; we'll do a very basic printing of a string
 	mov ax, text_video_memory
 	mov es, ax
-	mov di, 160*4
+	mov di, 160*3	; should be on 4th line if no additonal messages were printed (crude, I know)
 	mov si, msg_testNoBios
-
 
 
 
@@ -336,14 +337,6 @@ stage2_entry:
 noBios_loop:
 	cmp byte [ds:si], 0
 	je hang
-
-	
-
-	; print character
-	;mov ax, [ds:si]
-	;mov [es:di], ax
-	;inc si
-	;inc di
 
 	movsb
 	
