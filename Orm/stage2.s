@@ -14,7 +14,7 @@
 
 
 ; some random memory locations where we'll store stuff
-spare_mem equ 0x0500                    ; drive info, we have 0x50 bytes here.
+spare_mem equ 0x0500                    ; drive info in stage one. we have 0x50 bytes here.
 errorCodeTemp equ 0x550				
 driveBooted:equ 0x551
 ; some space is here
@@ -25,7 +25,7 @@ TSS equ 0x600                           ; 0x100 bytes, to make it easy
 
 
 %include "stage1.s"
-
+%include "debug.s"
 
 
 
@@ -40,6 +40,7 @@ msg_stage2Welcome db "BIOS MBR boot: stage 2 started", 13, 10, 0
 msg_gdt_setup_success db "GDT successfully set up.", 13, 10, 0
 msg_gdt_work db "GDT entry written", 13, 10, 0
 msg_testNoBios db "Experiment #4 is a success!",0
+msg_test db 13, 10,"16 byte memory dump:",13, 10, 0
 color_attr equ 0x0A ; green!
 
 ; GDT Descriptors (in a sane format)
@@ -85,85 +86,94 @@ stage2_entry:
 	call r_printstr                         ; we're executing from stage 2.
 
 
-	
+	mov si, msg_test
+	call r_printstr
+
+	mov si, GDT_NULL
+	call r_miniDump
+
+
+	mov ax, 0x1234
+	call r_regPrint
+	jmp hang
+
 
 ; ------ Global Descriptor Table Setup ----------------------------------------
         
         
-	; This is going to be complicated...
-	cli
-	; set up the GDT descriptor. This has to be loaded in with the LDTR instruction.
-	; we're not just putting this in the code because
-	; it needs to remain if the boot loader cdoe gets overwritten.
-	mov word [GDT_descriptor+2], GDT		; pointer to GDT
-	mov word [GDT_descriptor+4], 0
-	mov word [GDT_descriptor], 0x3F 	; size in bytes minus 1.
+; 	; This is going to be complicated...
+; 	cli
+; 	; set up the GDT descriptor. This has to be loaded in with the LDTR instruction.
+; 	; we're not just putting this in the code because
+; 	; it needs to remain if the boot loader cdoe gets overwritten.
+; 	mov word [GDT_descriptor+2], GDT		; pointer to GDT
+; 	mov word [GDT_descriptor+4], 0
+; 	mov word [GDT_descriptor], 0x3F 	; size in bytes minus 1.
 
 
-	; push gdt entry, then data
-	mov ax, GDT
-	push ax
+; 	; push gdt entry, then data
+; 	mov ax, GDT
+; 	push ax
 
-	;db "LOOK HERE"
-	mov bx,GDT_NULL
-	call r_EncodeGDT
+; 	;db "LOOK HERE"
+; 	mov bx,GDT_NULL
+; 	call r_EncodeGDT
 
-	pop ax
-	add ax, 8	
-	push ax
+; 	pop ax
+; 	add ax, 8	
+; 	push ax
 
 
-	mov bx, word GDT_CODE
-	call r_EncodeGDT
+; 	mov bx, word GDT_CODE
+; 	call r_EncodeGDT
 
-	pop ax
-	add ax, 8
-	push ax
+; 	pop ax
+; 	add ax, 8
+; 	push ax
 	
-	mov bx, word GDT_DATA
-	call r_EncodeGDT
+; 	mov bx, word GDT_DATA
+; 	call r_EncodeGDT
 
-	pop ax
-	add ax, 8
-	push ax
+; 	pop ax
+; 	add ax, 8
+; 	push ax
 
-	mov bx, word GDT_TASK_STATE
-	call r_EncodeGDT
+; 	mov bx, word GDT_TASK_STATE
+; 	call r_EncodeGDT
 	
 
-	jmp hang
-	; 4 null entries
-	mov bx, cx
-	mov cx, 0
+; 	jmp hang
+; 	; 4 null entries
+; 	mov bx, cx
+; 	mov cx, 0
 
-gdt_encode_null_loop:
-	push bx
-	push word GDT_TASK_STATE
-	call r_EncodeGDT
-	add cx, 1
-	add bx, 8
+; gdt_encode_null_loop:
+; 	push bx
+; 	push word GDT_TASK_STATE
+; 	call r_EncodeGDT
+; 	add cx, 1
+; 	add bx, 8
 
-	cmp cx, 4
-	jne gdt_encode_null_loop	
+; 	cmp cx, 4
+; 	jne gdt_encode_null_loop	
 
 
-	; next step, actually load everything in.
-	LGDT [GDT_descriptor]
-	; NOTE: we need to do a number of things with the tss in order for interrupts to work.
+; 	; next step, actually load everything in.
+; 	LGDT [GDT_descriptor]
+; 	; NOTE: we need to do a number of things with the tss in order for interrupts to work.
 
-	; to test, we can do a long jump and then try to print.
-	jmp code_segment:gdt_setup_complete
-gdt_setup_complete:
+; 	; to test, we can do a long jump and then try to print.
+; 	jmp code_segment:gdt_setup_complete
+; gdt_setup_complete:
 
-	mov si, msg_gdt_setup_success
-	call r_printstr
+; 	mov si, msg_gdt_setup_success
+; 	call r_printstr
 
 
 ; ------ Printing without BIOS ------------------------------------------------
 	; given the age of computers we care about this working on,
 	; we will assume VGA is a thing and working.
 	; also I don't quite understand how to check for it so meh.
-
 
 
 	; we're going to mess around with video memory now.
@@ -178,7 +188,7 @@ gdt_setup_complete:
 
 noBios_loop:
 	cmp byte [ds:si], 0
-	je hang
+	je post
 
 	movsb
 	
@@ -189,6 +199,10 @@ noBios_loop:
 
 	jmp noBios_loop
 
+post:
+	mov ax, 0x1234
+	call r_regPrint
+	jmp hang
 
 ; ------ FUNCIONS ------------------------------------------------
 
@@ -208,8 +222,6 @@ gdt_loop_count db 0
 r_EncodeGDT:
 	push ax
 	push bx
-	
-	
 
 	mov al, 0
 	mov [gdt_loop_count], al

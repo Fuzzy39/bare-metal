@@ -270,17 +270,17 @@ dq 1						; starting absolute block number
 
 
 
-messageWelcome db "BIOS MBR boot" 		; we do a trick to save some space here. newline is next.
+messageWelcome db "Orm BIOS MBR boot" 		; we do a trick to save some space here. newline is next.
 newline db 13,10,0
 messageDrive db "On disk with ID: 0x", 0
 
-msg_error db "Error: ",0
+msg_error db "Err: ",0
 msg_error_code db ". Code: 0x",0
 msg_error_13ext db "Interrupt 13h ext. are not supported.", 0
 msg_error_drive db "Failed reading drive", 0
 msg_error_driveParams db "Failed getting drive info",0
-msg_error_sectorLen db "Sector not 200h bytes.", 0
-msg_abort db "Boot Abort.", 0
+msg_error_sectorLen db "Sector not 512 bytes.", 0
+msg_abort db "Boot Abort", 0
 
 ; fill remainder of MBR with zeroes
 bytes_free equ 446-($-$$)
