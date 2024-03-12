@@ -40,7 +40,6 @@ msg_stage2Welcome db "BIOS MBR boot: stage 2 started", 13, 10, 0
 msg_gdt_setup_success db "GDT successfully set up.", 13, 10, 0
 msg_gdt_work db "GDT entry written", 13, 10, 0
 msg_testNoBios db "Experiment #4 is a success!",0
-msg_test db 13, 10,"16 byte memory dump:",13, 10, 0
 color_attr equ 0x0A ; green!
 
 ; GDT Descriptors (in a sane format)
@@ -86,88 +85,90 @@ stage2_entry:
 	call r_printstr                         ; we're executing from stage 2.
 
 
-	mov si, msg_test
-	call r_printstr
-
-	mov si, GDT_NULL
-	call r_miniDump
-
-
-	mov ax, 0x1234
-	call r_regPrint
-	jmp hang
-
 
 ; ------ Global Descriptor Table Setup ----------------------------------------
         
         
-; 	; This is going to be complicated...
-; 	cli
-; 	; set up the GDT descriptor. This has to be loaded in with the LDTR instruction.
-; 	; we're not just putting this in the code because
-; 	; it needs to remain if the boot loader cdoe gets overwritten.
-; 	mov word [GDT_descriptor+2], GDT		; pointer to GDT
-; 	mov word [GDT_descriptor+4], 0
-; 	mov word [GDT_descriptor], 0x3F 	; size in bytes minus 1.
+	; This is going to be complicated...
+	cli
+	; set up the GDT descriptor. This has to be loaded in with the LDTR instruction.
+	; we're not just putting this in the code because
+	; it needs to remain if the boot loader cdoe gets overwritten.
+	mov word [GDT_descriptor+2], GDT		; pointer to GDT
+	mov word [GDT_descriptor+4], 0
+	mov word [GDT_descriptor], 0x3F 	; size in bytes minus 1.
 
 
-; 	; push gdt entry, then data
-; 	mov ax, GDT
-; 	push ax
+	mov si, GDT_NULL
+	call r_miniDump
 
-; 	;db "LOOK HERE"
-; 	mov bx,GDT_NULL
-; 	call r_EncodeGDT
+	mov si, GDT_CODE
+	call r_miniDump
 
-; 	pop ax
-; 	add ax, 8	
-; 	push ax
+	mov si, GDT_DATA
+	call r_miniDump
+
+	mov si, GDT_TASK_STATE
+	call r_miniDump
+	ret
+
+	; push gdt entry, then data
+	mov ax, GDT
+	push ax
+
+	;db "LOOK HERE"
+	mov bx,GDT_NULL
+	call r_EncodeGDT
+
+	pop ax
+	add ax, 8	
+	push ax
 
 
-; 	mov bx, word GDT_CODE
-; 	call r_EncodeGDT
+	mov bx,  GDT_CODE
+	call r_EncodeGDT
 
-; 	pop ax
-; 	add ax, 8
-; 	push ax
+	pop ax
+	add ax, 8
+	push ax
 	
-; 	mov bx, word GDT_DATA
-; 	call r_EncodeGDT
+	mov bx, GDT_DATA
+	call r_EncodeGDT
 
-; 	pop ax
-; 	add ax, 8
-; 	push ax
+	pop ax
+	add ax, 8
+	push ax
 
-; 	mov bx, word GDT_TASK_STATE
-; 	call r_EncodeGDT
+	mov bx, GDT_TASK_STATE
+	call r_EncodeGDT
 	
 
-; 	jmp hang
-; 	; 4 null entries
-; 	mov bx, cx
-; 	mov cx, 0
+	jmp hang
+	; 4 null entries
+	mov bx, cx
+	mov cx, 0
 
-; gdt_encode_null_loop:
-; 	push bx
-; 	push word GDT_TASK_STATE
-; 	call r_EncodeGDT
-; 	add cx, 1
-; 	add bx, 8
+gdt_encode_null_loop:
+	push bx
+	push word GDT_TASK_STATE
+	call r_EncodeGDT
+	add cx, 1
+	add bx, 8
 
-; 	cmp cx, 4
-; 	jne gdt_encode_null_loop	
+	cmp cx, 4
+	jne gdt_encode_null_loop	
 
 
-; 	; next step, actually load everything in.
-; 	LGDT [GDT_descriptor]
-; 	; NOTE: we need to do a number of things with the tss in order for interrupts to work.
+	; next step, actually load everything in.
+	LGDT [GDT_descriptor]
+	; NOTE: we need to do a number of things with the tss in order for interrupts to work.
 
-; 	; to test, we can do a long jump and then try to print.
-; 	jmp code_segment:gdt_setup_complete
-; gdt_setup_complete:
+	; to test, we can do a long jump and then try to print.
+	jmp code_segment:gdt_setup_complete
+gdt_setup_complete:
 
-; 	mov si, msg_gdt_setup_success
-; 	call r_printstr
+	mov si, msg_gdt_setup_success
+	call r_printstr
 
 
 ; ------ Printing without BIOS ------------------------------------------------
@@ -214,76 +215,30 @@ post:
 ; ax  - addr of GDT entry
 ; bx - addr of data
 msg_error_gdtEncode db "Could not encode Global Descriptor Table entry. Limit > 2^20.", 13, 10, "High byte ->", 0
-msg_e db "FUCK (GOOD)", 0
 msg_colonSpace db ": ", 0
 msg_space db " ", 0
 gdt_loop_count db 0
 
 r_EncodeGDT:
-	push ax
-	push bx
+	;push ax
+	;push bx
 
-	mov al, 0
-	mov [gdt_loop_count], al
 
-	pop bx
-	cmp bx, 0x7e6c
-	jne restofit
+	;mov al, 0
+	;mov [gdt_loop_count], al
 
-	mov si, msg_e
-	call r_printstr
-
-restofit:
-
-	inc sp
-	mov si, sp
-	call r_printbyte
-	dec sp
-
-	mov si, sp
-	call r_printbyte
 	
-	mov si, msg_colonSpace
-	call r_printstr
 
-	; print 8 bytes at this location
-	pop si
-	push si
-	push si
-
-gdt_print_loop:
-	pop si
-	inc si
-	push si
-	dec si
-	call r_printbyte
 	
-	pop si
-	inc si
-	push si
-	dec si
-	call r_printbyte
-	
-	mov si, msg_space
-	call r_printstr
+	;pop si
 
-	mov al, [gdt_loop_count]
-	inc al
-	mov [gdt_loop_count], al
+	mov si, bx
+	call r_miniDump
 
-	cmp al, 4
-	jne gdt_print_loop
-
-	; the 9th byte
-	pop si
-	call r_printbyte
-	
-	mov si, newline
-	call r_printstr
-
+	;pop ax
+	ret
 
 	pop si
-
 	
 	; first we check that the limit does not exceed 20 bits
 	add si, 4

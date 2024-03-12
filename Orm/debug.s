@@ -164,13 +164,14 @@ r_printchar:
 
 ;----- miniDump ----------------------------------------------------------------
 ; prints 16 bytes of memory.
-; si should contain a pointer to the location read from.
+; si should contain a the location read from.
 
 
 r_miniDump:
 
-	push si				; start by printing the address.		
-	mov si, [si]
+	push si				; start by printing the address.
+	mov bx, sp		
+	mov si, bx-1
 	call r_printword
 
 	mov al, ':'
