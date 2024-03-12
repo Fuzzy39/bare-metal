@@ -99,18 +99,6 @@ stage2_entry:
 	mov word [GDT_descriptor], 0x3F 	; size in bytes minus 1.
 
 
-	mov si, GDT_NULL
-	call r_miniDump
-
-	mov si, GDT_CODE
-	call r_miniDump
-
-	mov si, GDT_DATA
-	call r_miniDump
-
-	mov si, GDT_TASK_STATE
-	call r_miniDump
-	ret
 
 	; push gdt entry, then data
 	mov ax, GDT
@@ -142,6 +130,10 @@ stage2_entry:
 	mov bx, GDT_TASK_STATE
 	call r_EncodeGDT
 	
+	mov si, GDT
+	call r_miniDump
+	mov si, GDT+16
+	call r_miniDump
 
 	jmp hang
 	; 4 null entries
@@ -220,23 +212,22 @@ msg_space db " ", 0
 gdt_loop_count db 0
 
 r_EncodeGDT:
-	;push ax
-	;push bx
+	push ax
+	push bx
 
 
-	;mov al, 0
-	;mov [gdt_loop_count], al
-
-	
+	mov al, 0
+	mov [gdt_loop_count], al
 
 	
-	;pop si
+
+	
+	pop si
+	push si
 
 	mov si, bx
 	call r_miniDump
 
-	;pop ax
-	ret
 
 	pop si
 	
@@ -268,17 +259,19 @@ limit_good:
 	mov al, [si]
 	mov [di], al	
 	add si, 1
-	sub di, 7
+	sub di, 1
 
 	; next we encode the limit.
-	mov ax, [si] 
+	mov al, [si]
+	shl al, 4
+	mov [di], al
+	inc si
+	sub di, 6
+
+	mov ax, [si]
 	mov [di], ax
 	add si, 2
 	add di, 6
-
-	mov al, [si]
-	mov [di], al
-	inc si
 
 	; now the special byte of specialness
 	dec di
@@ -289,7 +282,6 @@ limit_good:
 	inc si
 	inc di
 	mov ah, [si]
-	shl ah, 4 
 	mov al, [di]
 	or ah, al
 	mov [di], ah
