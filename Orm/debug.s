@@ -65,7 +65,7 @@ r_regPrint:
     
     ; start the printout!
     mov si, regPrint_msg
-    call r_printstr
+    call r_printstr 
 
     mov si, 0
     mov [regPrint_i], si

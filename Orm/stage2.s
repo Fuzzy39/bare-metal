@@ -39,7 +39,7 @@ text_video_memory equ 0xb800
 msg_stage2Welcome db "BIOS MBR boot: stage 2 started", 13, 10, 0
 msg_gdt_setup_success db "GDT successfully set up.", 13, 10, 0
 msg_gdt_work db "GDT entry written", 13, 10, 0
-msg_testNoBios db "Experiment #4 is a success!",0
+msg_testNoBios db "Completed program!",0
 color_attr equ 0x0A ; green!
 
 ; GDT Descriptors (in a sane format)
@@ -98,7 +98,12 @@ stage2_entry:
 	mov word [GDT_descriptor+4], 0
 	mov word [GDT_descriptor], 0x3F 	; size in bytes minus 1.
 
-
+	; clear mem first
+	mov di, GDT
+	mov al, 0
+	mov ecx, 0x46
+	rep stosb 
+	
 
 	; push gdt entry, then data
 	mov ax, GDT
@@ -135,30 +140,13 @@ stage2_entry:
 	mov si, GDT+16
 	call r_miniDump
 
-	jmp hang
-	; 4 null entries
-	mov bx, cx
-	mov cx, 0
-
-gdt_encode_null_loop:
-	push bx
-	push word GDT_TASK_STATE
-	call r_EncodeGDT
-	add cx, 1
-	add bx, 8
-
-	cmp cx, 4
-	jne gdt_encode_null_loop	
 
 
 	; next step, actually load everything in.
 	LGDT [GDT_descriptor]
 	; NOTE: we need to do a number of things with the tss in order for interrupts to work.
 
-	; to test, we can do a long jump and then try to print.
-	jmp code_segment:gdt_setup_complete
-gdt_setup_complete:
-
+	; not entirely sure it worked, but we can only know once we're in protected mode, so.
 	mov si, msg_gdt_setup_success
 	call r_printstr
 
@@ -173,7 +161,7 @@ gdt_setup_complete:
 	; we'll do a very basic printing of a string
 	mov ax, text_video_memory
 	mov es, ax
-	mov di, 160*5	; should be on 4th line if no additonal messages were 
+	mov di, 160*23	; should be on 4th line if no additonal messages were 
                         ; printed (crude, I know)
 
 	mov si, msg_testNoBios
@@ -291,6 +279,9 @@ limit_good:
 	call r_printstr
 
 	ret
+;
+
+
 
 TIMES (512*(1+sectors))-($-$$) db 0
 
