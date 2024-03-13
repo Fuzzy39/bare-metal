@@ -19,7 +19,7 @@ errorCodeTemp equ 0x550
 driveBooted:equ 0x551
 ; some space is here
 GDT_descriptor equ 0x55A                ; 0x46 bytes in size header + 8 entries
-GDT equ 0x660
+GDT equ 0x560
 TSS equ 0x600                           ; 0x100 bytes, to make it easy
 
 
@@ -38,7 +38,6 @@ text_video_memory equ 0xb800
 
 msg_stage2Welcome db "BIOS MBR boot: stage 2 started", 13, 10, 0
 msg_gdt_setup_success db "GDT successfully set up.", 13, 10, 0
-msg_gdt_work db "GDT entry written", 13, 10, 0
 msg_testNoBios db "Completed program!",0
 color_attr equ 0x0A ; green!
 
@@ -88,7 +87,7 @@ stage2_entry:
 
 ; ------ Global Descriptor Table Setup ----------------------------------------
         
-        
+    
 	; This is going to be complicated...
 	cli
 	; set up the GDT descriptor. This has to be loaded in with the LDTR instruction.
@@ -208,13 +207,11 @@ r_EncodeGDT:
 	mov [gdt_loop_count], al
 
 	
+	; pop si
+	; push si
 
-	
-	pop si
-	push si
-
-	mov si, bx
-	call r_miniDump
+	; mov si, bx
+	; call r_miniDump
 
 
 	pop si
@@ -231,23 +228,31 @@ r_EncodeGDT:
 limit_good:
 	pop di
 	sub si, 4
+	
 	; next, we encode the base.
 	add di, 2
-
-	mov ax, [si] 
-	mov [di], ax			; low word of base
-	add si, 2
-	add di, 2
-
-	; high word of base
 	mov al, [si]
+	mov [di], al
+	inc si
+	inc di
+	mov al, [si]
+	mov [di], al
+	inc si
+	inc di
+
+
+    mov al, [si]
 	mov [di], al
 	add si, 1
 	add di, 3
 	mov al, [si]
 	mov [di], al	
+
+
 	add si, 1
 	sub di, 1
+
+
 
 	; next we encode the limit.
 	mov al, [si]
@@ -274,12 +279,8 @@ limit_good:
 	or ah, al
 	mov [di], ah
 
-
-	mov si, msg_gdt_work
-	call r_printstr
-
 	ret
-;
+
 
 
 
