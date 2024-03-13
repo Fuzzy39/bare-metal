@@ -295,6 +295,18 @@ limit_good:
 
 
 
+; ------ isA20Enabled ------------------------------------------------
+; al - 00 if not enabled, 01 if enabled
+mov ds, 0xFFFF
+mov si, 0xFFFE
+call r_printword
+
+mov si, 0xFFFE
+mov ax, [ds:0xFFFE]
+
+
+
+
 
 TIMES (512*(1+sectors))-($-$$) db 0
 
