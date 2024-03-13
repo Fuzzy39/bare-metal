@@ -37,8 +37,9 @@ TSS equ 0x600                           ; 0x100 bytes, to make it easy
 text_video_memory equ 0xb800
 
 msg_stage2Welcome db "BIOS MBR boot: stage 2 started", 13, 10, 0
-msg_gdt_setup_success db "GDT successfully set up.", 13, 10, 0
-msg_testNoBios db "Completed program!",0
+msg_gdt_begin db "Setting up GDT...",13,10,0
+msg_gdt_setup_success db "GDT set up. Contents:", 13, 10, 0
+msg_testNoBios db "The bootloader has reached the end of its code!",0
 color_attr equ 0x0A ; green!
 
 ; GDT Descriptors (in a sane format)
@@ -87,6 +88,8 @@ stage2_entry:
 
 ; ------ Global Descriptor Table Setup ----------------------------------------
         
+	mov si, msg_gdt_begin
+	call r_printstr
     
 	; This is going to be complicated...
 	cli
@@ -134,22 +137,33 @@ stage2_entry:
 	mov bx, GDT_TASK_STATE
 	call r_EncodeGDT
 	
-	mov si, GDT
-	call r_miniDump
-	mov si, GDT+16
-	call r_miniDump
 
+	
 
 
 	; next step, actually load everything in.
 	LGDT [GDT_descriptor]
+	sti
+
+	mov si, msg_gdt_setup_success
+	call r_printstr
+	
+	mov si, GDT
+	call r_miniDump
+	mov si, GDT+16
+	call r_miniDump
+	mov si, GDT+32
+	call r_miniDump
+	mov si, GDT+48
+	call r_miniDump
+
+
 	; NOTE: we need to do a number of things with the tss in order for interrupts to work.
 
 	; not entirely sure it worked, but we can only know once we're in protected mode, so.
-	mov si, msg_gdt_setup_success
-	call r_printstr
 
 
+	
 ; ------ Printing without BIOS ------------------------------------------------
 	; given the age of computers we care about this working on,
 	; we will assume VGA is a thing and working.
@@ -180,8 +194,6 @@ noBios_loop:
 	jmp noBios_loop
 
 post:
-	mov ax, 0x1234
-	call r_regPrint
 	jmp hang
 
 ; ------ FUNCIONS ------------------------------------------------
