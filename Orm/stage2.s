@@ -40,6 +40,8 @@ msg_stage2Welcome db "BIOS MBR boot: stage 2 started", 13, 10, 0
 msg_gdt_begin db "Setting up GDT...",13,10,0
 msg_gdt_setup_success db "GDT set up. Contents:", 13, 10, 0
 msg_testNoBios db "The bootloader has reached the end of its code!",0
+msg_a20_already db " The A20 line is already enabled.",13, 10,0
+msg_a20_disabled db " The A20 line is disabled.",13, 10, 0
 color_attr equ 0x0A ; green!
 
 ; GDT Descriptors (in a sane format)
@@ -85,6 +87,22 @@ stage2_entry:
 	call r_printstr                         ; we're executing from stage 2.
 
 
+; ------ Enable the A20 line --------------------------------------------------
+
+	call r_isA20Enabled
+	cmp al, 0
+	jnz test_enabled	;  check to see if it's enabled.
+
+test_disabled:
+	mov si, msg_a20_disabled
+	call r_printstr
+	jmp post_a20
+
+test_enabled:
+	mov si, msg_a20_already
+	call r_printstr
+
+post_a20:
 
 ; ------ Global Descriptor Table Setup ----------------------------------------
         
@@ -297,12 +315,45 @@ limit_good:
 
 ; ------ isA20Enabled ------------------------------------------------
 ; al - 00 if not enabled, 01 if enabled
-mov ds, 0xFFFF
-mov si, 0xFFFE
-call r_printword
+A20check_mbrAddr equ 0x7dfe
+A20check_mbrWrap equ 0x7e0e
 
-mov si, 0xFFFE
-mov ax, [ds:0xFFFE]
+r_isA20Enabled:
+	mov ax, 0xFFFF
+	mov ds, ax
+	mov si, A20check_mbrWrap
+	call r_printword
+
+	mov si, [ds:A20check_mbrWrap]
+	mov ax, 0x0000
+	mov ds, ax
+	mov di, [ds:A20check_mbrAddr]
+	cmp si, di
+	jne A20_enabled				; if the address in high memory and low are the same, 
+								; then this could be because A20 is disabled, but it's not certain.
+	
+	inc di
+	mov [ds:A20check_mbrAddr], di
+	mov ax, 0xFFFF
+	mov ds, ax
+	mov si, [ds:A20check_mbrWrap]	
+	mov ax, 0x0000
+	mov ds, ax
+
+	cmp si, di
+	jne A20_enabled				; we changed low mem, and high mem changed. A20 is enabled
+								; if it did not, then we know it's disabled.
+A20_disabled:	
+	dec di						
+	mov [ds:A20check_mbrAddr], di
+	mov al, 0
+	ret
+
+A20_enabled:
+	dec di						
+	mov [ds:A20check_mbrAddr], di
+	mov al, 1
+	ret
 
 
 

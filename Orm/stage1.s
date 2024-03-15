@@ -291,6 +291,7 @@ TIMES 64 db 0
 
 
 ; MBR magic number
+mbr_magic:
 db 0x55
 db 0xAA
 
