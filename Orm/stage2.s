@@ -89,6 +89,9 @@ stage2_entry:
 
 ; ------ Enable the A20 line --------------------------------------------------
 
+	mov ax, 0x2400
+	int 0x15
+
 	call r_isA20Enabled
 	cmp al, 0
 	jnz test_enabled	;  check to see if it's enabled.
