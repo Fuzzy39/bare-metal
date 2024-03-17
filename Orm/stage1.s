@@ -7,9 +7,7 @@
 ; on various messages that it can print in error situations.
 
 
-BITS 16
 
-org 0x7c00
 
 
 entry:
@@ -225,6 +223,8 @@ high_print:
 r_error:
 ; ---------------
 ; errors out with a code. pops an address to an error message string. ah is error code
+; if ah is zero, no code is displayed.
+
 	mov [errorCodeTemp], ah
 
 	mov si, msg_error
@@ -257,7 +257,7 @@ hang:
 	jmp hang				; do nothing.
 
 
-sectors equ 2
+
 
 ; disk address packet for reading additional sectors from the disk
 disk_access_packet:
@@ -270,17 +270,17 @@ dq 1						; starting absolute block number
 
 
 
-messageWelcome db "Orm BIOS MBR boot" 		; we do a trick to save some space here. newline is next.
+messageWelcome db "Orm BIOS boot" 		; we do a trick to save some space here. newline is next.
 newline db 13,10,0
 messageDrive db "On disk with ID: 0x", 0
 
-msg_error db "Err: ",0
+msg_error db "Error: ",0
 msg_error_code db ". Code: 0x",0
 msg_error_13ext db "Interrupt 13h ext. are not supported.", 0
 msg_error_drive db "Failed reading drive", 0
 msg_error_driveParams db "Failed getting drive info",0
 msg_error_sectorLen db "Sector not 512 bytes.", 0
-msg_abort db "Boot Abort", 0
+msg_abort db "Boot Abort.", 0
 
 ; fill remainder of MBR with zeroes
 bytes_free equ 446-($-$$)
