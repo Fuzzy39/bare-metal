@@ -286,8 +286,19 @@ msg_abort db "Boot Abort.", 0
 bytes_free equ 446-($-$$)
 TIMES  bytes_free db 0
 
-; partition table which we currently don't care about
-TIMES 64 db 0
+; partition table! oh no
+; we intend on having a single fat32 partition
+db 0x80									; we intend this to be the 'active' partition
+;64 sectors = 1 head. 255 heads = 1 cylinder
+db 0x0									; starting head
+dw sectors+2							; starting sector+cylinder
+db 0x0c									; partition type. 0c = fat32 lba mapped
+db 0x0									; ending head
+dw sectors+2+(partition_size_kb*2)		; ending sector+cylinder
+dd sectors+1							; starting lba
+dd partition_size_kb*2					; sectors in partition
+
+TIMES 48 db 0
 
 
 ; MBR magic number

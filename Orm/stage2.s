@@ -57,7 +57,7 @@ stage2_entry:
 ; ----- Switch to protected mode ----------------------------------------------
 
 	mov si, msg_enterProtected
-	call r_printstr						; you did us a grand service, printstr, but where we're going, you won't be enough.
+	call r_printstr						; you did us a grand service, printstr, but where we're going, you won't be enough. 
 
 	cli
 	mov eax, cr0						; note: eax is available in real mode, we aren't protected yet
@@ -136,6 +136,6 @@ post:
 
 
 
-TIMES (512*(1+sectors))-($-$$) db 0
+
 
 
