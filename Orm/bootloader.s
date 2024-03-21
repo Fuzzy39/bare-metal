@@ -26,7 +26,7 @@ TSS equ 0x600                           ; 0x100 bytes, to make it easy
 ; size, in sectors (512 bytes) of stage 2. stage 1 is one sector.
 sectors equ 5 ; 5+1 = 3kb of space for stage 1 and 2 bootloader.
 
-partition_size_kb equ 3     ;size, in kibibytes, of the fat partition where the os is. 
+partition_size_kb equ 7     ;size, in kibibytes, of the fat partition where the os is. 
                             ; WARNING: this cannot be larger than (64-sectors+1)/2 (currently 29kb) 
                             ; without adjusting partition table 
 
@@ -56,6 +56,8 @@ org 0x7c00
 
 TIMES (512*(1+sectors))-($-$$) db 0
 
+
+
 ; Fat 12 parition starts here
 
 db 0xeb, 0x00, 0x90           ; relative jump. execution really shouldn't ever go here
@@ -67,9 +69,9 @@ db 2                        ; number of fat structures. should always be 2, basi
 dw 32                       ; number of 32 byte directory entries in the root directory.
 dw partition_size_kb*2      ; sectors on volume
 db 0xf8                     ; typically f0 for removable media. f8 for non-removable. typically unused.
-dw ??                       ; sectors occupied by one fat
+dw 1                        ; sectors occupied by one fat
 dw 64                       ; sectors for track. shouldn't matter.
-dw ??                       ; number of heads. check this! this is wrong! but maybe it's fine?
+dw 0x10                     ; number of heads. check this! this is wrong! but maybe it's fine?
 dd sectors+1                ; number of hidden sectors on disk.
 dd 0 				        ; number of sectors in partition if greater than 2^16
 ; fat 12/16 exclusive
@@ -85,9 +87,46 @@ TIMES (512*(1+sectors+1))-($-$$)-2 db 0
 
 dw 0xAA55                   ; apparently has to be true
 
+; FAT Table!
+
+; first two special entires
+db 0xf8
+db 0xff
+db 0xff
+
+; FAT table size
+TIMES (512*(1+sectors+1+1))-($-$$) db 0
+
+; FAT table 2 is a copy of the first, as far as I know.
+
+
+; first two special entires
+db 0xf8
+db 0xff
+db 0xff
+
+; FAT2 table size
+TIMES (512*(1+sectors+1+2))-($-$$) db 0
+
+; root directory
+
+; we will just name the partition here.
+db "Orm OS  "       ; name
+db "   "            ; ext.
+db 0x08             ; volume label attribute (not real file)
+db 0x0              ; reserved, legacy
+db 0x0              ; timestamp of some sort
+dw 0x0              ; timestamp
+dw 0x0              ; date
+dw 0x0              ; date
+dw 0x0              ; high cluster
+dw 0x0              ; write time
+dw 0x0              ; write date
+dw 0x0              ; low cluster
+dd 0x0              ; file size
 
 ; root directory size
-TIMES (512*(1+sectors+1+3))-($-$$) db 0
+TIMES (512*(1+sectors+1+2+3))-($-$$) db 0
 
 
 
