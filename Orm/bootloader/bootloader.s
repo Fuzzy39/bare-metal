@@ -45,14 +45,14 @@ tss_segment equ  0b00011000
 org 0x7c00
 
 
-%include "stage1.s"
+%include "bootloader/stage1.s"
 
 ; the following files contain functions/routines used by the stage 2 bootloader
-%include "debug.s"
-%include "gdt.s"
-%include "a20.s"
+%include "bootloader/debug.s"
+%include "bootloader/gdt.s"
+%include "bootloader/a20.s"
 
-%include "stage2.s"
+%include "bootloader/stage2.s"
 
 TIMES (512*(1+sectors))-($-$$) db 0
 
