@@ -68,7 +68,7 @@ dw 1                        ; reserved sectors (just this one, please!)
 db 2                        ; number of fat structures. should always be 2, basically
 dw 32                       ; number of 32 byte directory entries in the root directory.
 dw partition_size_kb*2      ; sectors on volume
-db 0xf8                     ; typically f0 for removable media. f8 for non-removable. typically unused.
+db 0xf0                     ; typically f0 for removable media. f8 for non-removable. typically unused.
 dw 1                        ; sectors occupied by one fat
 dw 64                       ; sectors for track. shouldn't matter.
 dw 0x10                     ; number of heads. check this! this is wrong! but maybe it's fine?
