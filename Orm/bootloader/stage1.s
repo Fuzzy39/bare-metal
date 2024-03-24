@@ -52,27 +52,11 @@ start:
 	call r_printstr	
 	
 
-; ----- Prepare to get more secctors ------------------------------------------------------
+; ----- load data from the drive and start stage 2. ------------------------------------------------------
 
 	; let's try to figure out disk io now I guess.
 	
-	; step one: are int 13h extensions enabled? If not we give up and croak
-	
-	mov ah, 0x41				; check if enabled
-	mov bx, 0x55aa				; magic number
-	mov dl, [driveBooted]			; drive
-	
-	int 0x13				; carry should be cleared
-	
-	jnc drive_ext_installed
-	
 
-	push msg_error_13ext			; error out and give up.
-	mov ah, 0
-	jmp r_error
-
-
-drive_ext_installed:
 	
 	
 	; print a message, because I want to.
@@ -86,65 +70,24 @@ drive_ext_installed:
 	call r_printstr
 	
 
-
-
-	; Next we get info about the disk.
-	mov ah, 0x48				; GET DRIVE PARAMETERS
-	mov dl, [driveBooted]		
-	mov si, spare_mem
-
-	mov word [si], 0x0042				; size of buffer
-
-	int 0x13
-
-	jnc got_drive_params
-
-	; error!
-	push msg_error_driveParams
-	jmp r_error
-
-got_drive_params:
-
-	; check that sector size is equal to 512
-
-	
-
-
-	mov ax, [spare_mem+0x18]
-	cmp ax, 512
-	je get_sectors
-
-	; the sector size is wrong, so we'll print it out.
-	; barely enough space for this, so hopefully if somebody encounters this 
-	; they would be able to guess what it's for
-	mov si, spare_mem+0x19
-	call r_printbyte
-	dec si
-	call r_printbyte
-	mov si, newline
-	call r_printstr
-
-	mov ah, 0
-	push msg_error_sectorLen
-	jmp r_error
-
-; ----- Get more sectors ------------------------------------------------------
-
-
-get_sectors:
-
-	; now we can try to read things from disk. supposedly.
-	mov ah, 0x42
-	mov si, disk_access_packet
+	; access disk
+	mov ah, 0x02
+	mov al, sectors						; number of sectors to read
+	mov ch, 0							; cylinder num
+	mov cl, 1							; sector num
+	mov dh, 0							; head num
+	mov dl, [driveBooted]
+	mov bx, 0x7e00						; memory location to load
 	
 	int 0x13
-	
-	; check if worked
-	jnc stage2_entry			; If We succeded, we can now bail to stage 2.
-	
-	; print an error message.
+
+	jnc stage2_entry
 	push msg_error_drive
 	jmp r_error
+
+
+
+
 	
 ; ----- end of MBR main code ---------------------------------------------------	
 
@@ -276,10 +219,7 @@ messageDrive db "On disk with ID: 0x", 0
 
 msg_error db "Error: ",0
 msg_error_code db ". Code: 0x",0
-msg_error_13ext db "Interrupt 13h ext. are not supported.", 0
 msg_error_drive db "Failed reading drive", 0
-msg_error_driveParams db "Failed getting drive info",0
-msg_error_sectorLen db "Sector not 512 bytes.", 0
 msg_abort db "Boot Abort.", 0
 
 ; fill remainder of MBR with zeroes
