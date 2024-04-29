@@ -16,7 +16,7 @@ make: drive.iso driveContent
 	sudo umount mnt
 	sudo losetup -d $(LOOP)
 
-drive.iso:
+drive.iso: bootloader/*.s
 	nasm -f bin -W+all -o drive.iso bootloader/bootloader.s
 	
 driveContent:
