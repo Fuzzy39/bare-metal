@@ -22,6 +22,10 @@ driveBooted:equ 0x551
 GDT_descriptor equ 0x55A                ; 0x46 bytes in size header + 8 entries
 GDT equ 0x560
 TSS equ 0x600                           ; 0x100 bytes, to make it easy
+FREE_SECTOR equ 0x700                   ; sector is 0x200 bytes
+
+
+
 
 ; size, in sectors (512 bytes) of stage 2. stage 1 is one sector.
 sectors equ 5 ; 5+1 = 3kb of space for stage 1 and 2 bootloader.
@@ -51,6 +55,7 @@ org 0x7c00
 %include "bootloader/debug.s"
 %include "bootloader/gdt.s"
 %include "bootloader/a20.s"
+%include "bootloader/fatload.s"
 
 %include "bootloader/stage2.s"
 

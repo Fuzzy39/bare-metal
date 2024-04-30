@@ -42,8 +42,6 @@ stage2_entry:
 
 ; ------ Enable the A20 line --------------------------------------------------
 
-
-
 	call r_A20enable
 
 
@@ -52,6 +50,12 @@ stage2_entry:
 ;	 that's it! if it fails it errors out, so no need to do anything.
 	call r_setupGDT
 
+
+; ----- Read the kernel or whatever off the disk ------------------------------
+
+	call r_getFATbpb
+	mov si, FREE_SECTOR
+	call r_miniDump
 
 
 ; ----- Switch to protected mode ----------------------------------------------

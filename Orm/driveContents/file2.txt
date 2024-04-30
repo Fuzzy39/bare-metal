@@ -1,0 +1,13 @@
+File 2 is an amazing file, filled with mystery and intruigeueiueieu..
+I can't spell. This is a grand tradgedy.
+I really can't spell, can I?
+What a shame.
+Where's the mystery, you ask? I don't know, but I'll continue typing regardless.
+The goal is to write enough so that the file is more than 512 bytes, or 0x200 in hex.
+this is greater than the size of a sector, which for this partition means that the file is composed
+of several fat clusters. Being able to read the entirity of this file shows that the code to read a
+file from the partition is at least somewhat functional, and able to read multiple
+clusters. hopefully, it works. I mean, as I'm writing this we're definitely a ways away yet. We've
+got to detect the fat partition first, before we can even find a file.
+eventually, I might be able to execute code present on a file... maybe even C code?
+that'd be nice. some nice 32 bit C, much better than 16 bit assembly...
