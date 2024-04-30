@@ -290,7 +290,8 @@ bytes_free equ 446-($-$$)
 TIMES  bytes_free db 0
 
 ; partition table! oh no
-; we intend on having a single fat32 partition
+; we intend on having a single fat12 partition
+partition_table:
 db 0x80									; we intend this to be the 'active' partition
 ;64 sectors = 1 head. 255 heads = 1 cylinder
 db 0x0									; starting head
@@ -302,7 +303,7 @@ dd sectors+1							; starting lba
 dd partition_size_kb*2					; sectors in partition
 
 TIMES 48 db 0
-
+partition_table_end:
 
 ; MBR magic number
 mbr_magic:
