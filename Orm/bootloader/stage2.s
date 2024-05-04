@@ -53,9 +53,8 @@ stage2_entry:
 
 ; ----- Read the kernel or whatever off the disk ------------------------------
 
-	call r_getFATbpb
-	mov si, FREE_SECTOR
-	call r_miniDump
+	call r_getFAT
+
 
 
 ; ----- Switch to protected mode ----------------------------------------------

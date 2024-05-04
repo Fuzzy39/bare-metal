@@ -18,12 +18,17 @@ BITS 16
 spare_mem equ 0x0500                    ; we have 0x50 bytes here.
 errorCodeTemp equ 0x550				
 driveBooted:equ 0x551
-; some space is here
+
+partition_start_sector equ 0x552 ; word
+fat_table_size equ 0x554   ; word
+fat_size_sectors equ 0x556 ; dword
+
 GDT_descriptor equ 0x55A                ; 0x46 bytes in size header + 8 entries
 GDT equ 0x560
 TSS equ 0x600                           ; 0x100 bytes, to make it easy
 FREE_SECTOR equ 0x700                   ; sector is 0x200 bytes
 
+fat_first_data_sector equ 0x900          ; dword. first sector of data on the fat partition (absolute)
 
 
 
@@ -71,7 +76,7 @@ dw 512                      ; bytes per sector
 db 1                        ; sectors per cluster
 dw 1                        ; reserved sectors (just this one, please!)
 db 2                        ; number of fat structures. should always be 2, basically
-dw 32                       ; number of 32 byte directory entries in the root directory.
+dw 16                       ; number of 32 byte directory entries in the root directory.
 dw partition_size_kb*2      ; sectors on volume
 db 0xf8                     ; typically f0 for removable media. f8 for non-removable. typically unused.
 dw 1                        ; sectors occupied by one fat
