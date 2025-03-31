@@ -11,3 +11,4 @@ clusters. hopefully, it works. I mean, as I'm writing this we're definitely a wa
 got to detect the fat partition first, before we can even find a file.
 eventually, I might be able to execute code present on a file... maybe even C code?
 that'd be nice. some nice 32 bit C, much better than 16 bit assembly...
+END

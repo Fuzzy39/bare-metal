@@ -29,6 +29,7 @@ TSS equ 0x600                           ; 0x100 bytes, to make it easy
 FREE_SECTOR equ 0x700                   ; sector is 0x200 bytes
 
 fat_first_data_sector equ 0x900          ; dword. first sector of data on the fat partition (absolute)
+fat_root_dir_sectors equ 0x904           ; word. the length, in sectors, of the root directory.
 
 
 

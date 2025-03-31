@@ -53,11 +53,9 @@ r_accessDisk:
 msg_fat_noPartition: db "Could not find an active partition on the drive.", 13, 10,0
 msg_fat_starting db "Reading partition metadata... first few bytes:", 13, 10,0
 msg_fat_fs_error db "Active partiton is not FAT12.", 13, 10, 0
-msg_fat_confirm db "partition is FAT12. Scanning root directory for '", 0
-msg_fat_confirm2 db "'.", 13, 10, 0
-msg_fat_clusterCount db "Number of data clusters: ", 0
-str_boot_file db "file2", 0 ; name only. cannot be greater than 8 characters
-str_boot_ext db "txt", 0   ; extensSion only. cannot be greater than 3 characters
+msg_fat_confirm db "Partition is FAT12.", 13, 10, 0 
+
+
 
 r_getFAT:
     mov si, partition_table
@@ -138,6 +136,7 @@ getFAT_foundActive:
     div bx
     ; ax contains size of root directory
     mov [spare_mem], ax
+    mov [fat_root_dir_sectors], ax
 
     ; get size of the fat itself
     mov bx, [FREE_SECTOR+22]    ; BPB_FATSz16
@@ -180,10 +179,7 @@ getFAT_getclusters:
     mov [fat_first_data_sector+2], dx ; for any reasonable purposes, probably 0.
                                       ; unless somehow we're not the first partition.
                                       ; this code is brittle, but this is assembly...
-                                      ; it's fine.
-    
-  
-   
+                                      ; it's fine.S
   
     ; number of data sectors
     mov bx, [fat_first_data_sector]     ; A
@@ -217,14 +213,32 @@ getFAT_fatConfirmed:
     ; print a message confirming that we like the partition
     mov si, msg_fat_confirm
     call r_printstr
+
+    ret
+
+
+
+; ----- readFile --------------------------------------------------------------
+; 
+
+msg_fat_searching db "Scanning root directory for '", 0
+msg_fat_searching2 db "'.", 13, 10, 0
+msg_fat_clusterCount db "Number of data clusters: ", 0
+str_boot_file db "file2", 0 ; name only. cannot be greater than 8 characters
+str_boot_ext db "txt", 0   ; extensSion only. cannot be greater than 3 characters
+
+r_readFile:
+
+    ; print a message saying we're looking for the file.
+    mov si, msg_fat_searching
+    call r_printstr
     mov si, str_boot_file
     call r_printstr
     mov al, '.'
     call r_printchar
     mov si, str_boot_ext
     call r_printstr
-    mov si, msg_fat_confirm2
+    mov si, msg_fat_searching2
     call r_printstr
 
     ret
-

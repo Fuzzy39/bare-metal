@@ -54,7 +54,7 @@ stage2_entry:
 ; ----- Read the kernel or whatever off the disk ------------------------------
 
 	call r_getFAT
-
+	call r_readFile
 
 
 ; ----- Switch to protected mode ----------------------------------------------
@@ -111,7 +111,7 @@ BITS 32
 
 
 	mov edi, text_video_memory
-	add edi, 160*15
+	add edi, 160*18
 
 	mov esi, msg_testNoBios
 
